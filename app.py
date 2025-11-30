@@ -151,8 +151,8 @@ def predict():
             bbox = nail_data['bbox']
             confidence = nail_data['confidence']
             
-            # Classify the nail crop
-            classification_result = disease_classifier.classify(nail_crop)
+            # Classify the nail crop with Grad-CAM
+            classification_result = disease_classifier.classify(nail_crop, return_gradcam=True)
             probability = float(classification_result['probability'])
             
             # Store all results for comparison
@@ -163,7 +163,8 @@ def predict():
                 'disease': classification_result['predicted_class'] if probability > PROBABILITY_THRESHOLD else None,
                 'probability': probability,
                 'no_disease_detected': probability <= PROBABILITY_THRESHOLD,
-                'all_probabilities': classification_result['all_probabilities']
+                'all_probabilities': classification_result['all_probabilities'],
+                'gradcam_heatmap': classification_result.get('gradcam_heatmap')  # Add Grad-CAM
             })
         
         # Step 3: Select the nail with the highest disease probability
@@ -206,7 +207,15 @@ def predict():
         print(f"Error in prediction: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': f'An error occurred: {str(e)}'}), 500
+        # Return more detailed error for debugging (remove in production)
+        error_details = str(e)
+        if hasattr(e, '__traceback__'):
+            import traceback as tb
+            error_details = ''.join(tb.format_exception(type(e), e, e.__traceback__))
+        return jsonify({
+            'error': f'An error occurred: {str(e)}',
+            'details': error_details if app.debug else None
+        }), 500
 
 
 if __name__ == '__main__':

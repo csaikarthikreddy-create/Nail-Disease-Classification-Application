@@ -313,6 +313,44 @@ header h1 {
     font-weight: 600;
 }
 
+/* Grad-CAM Visualization Styles */
+.gradcam-visualization {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.gradcam-visualization h4 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.gradcam-visualization p {
+    font-size: 0.9em;
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+
+.gradcam-image {
+    max-width: 150px;
+    max-height: 150px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+/* Responsive: Make Grad-CAM smaller on mobile */
+@media (max-width: 768px) {
+    .gradcam-image {
+        max-width: 100%;
+        max-height: 150px;
+    }
+}
+
 /* Error Section */
 .error-section {
     margin-top: 20px;

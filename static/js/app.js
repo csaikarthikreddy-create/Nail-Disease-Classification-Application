@@ -127,27 +127,43 @@ function displayResults(data) {
 
     // Check if any credible diseases were detected
     if (data.num_credible_detections === 0) {
-        // No credible detections found
-        const noDiseaseCard = document.createElement('div');
-        noDiseaseCard.className = 'result-card';
-        noDiseaseCard.style.textAlign = 'center';
-        noDiseaseCard.style.padding = '40px';
-        noDiseaseCard.innerHTML = `
-            <div style="font-size: 3em; margin-bottom: 20px;">✓</div>
-            <h3 style="color: #28a745; margin-bottom: 15px;">No Disease Identified</h3>
-            <p style="color: #666; font-size: 1.1em; line-height: 1.6;">
-                The analysis did not detect any nail conditions with sufficient confidence (>50%).<br>
-                This is a positive result indicating no significant abnormalities were found.
-            </p>
-            <p style="color: #999; font-size: 0.9em; margin-top: 20px;">
-                <strong>Note:</strong> ${data.num_nails_detected} nail(s) were analyzed. The result shown corresponds to the nail with the highest disease probability, but it did not exceed the 50% confidence threshold.
-            </p>
-        `;
-        resultsContainer.appendChild(noDiseaseCard);
+        // No credible detections found, but still show result with Grad-CAM if available
+        if (data.results && data.results.length > 0) {
+            const result = data.results[0];
+            // If Grad-CAM is available, show the result card with visualization
+            if (result.gradcam_heatmap) {
+                const resultCard = createResultCard(result, 0);
+                if (resultCard) {
+                    resultsContainer.appendChild(resultCard);
+                }
+            } else {
+                // No Grad-CAM, show simple no disease message
+                const noDiseaseCard = document.createElement('div');
+                noDiseaseCard.className = 'result-card';
+                noDiseaseCard.style.textAlign = 'center';
+                noDiseaseCard.style.padding = '40px';
+                noDiseaseCard.innerHTML = `
+                    <div style="font-size: 3em; margin-bottom: 20px;">✓</div>
+                    <h3 style="color: #28a745; margin-bottom: 15px;">No Disease Identified</h3>
+                    <p style="color: #666; font-size: 1.1em; line-height: 1.6;">
+                        The analysis did not detect any nail conditions with sufficient confidence (>50%).<br>
+                        This is a positive result indicating no significant abnormalities were found.
+                    </p>
+                    <p style="color: #999; font-size: 0.9em; margin-top: 20px;">
+                        <strong>Note:</strong> ${data.num_nails_detected} nail(s) were analyzed. The result shown corresponds to the nail with the highest disease probability, but it did not exceed the 50% confidence threshold.
+                    </p>
+                `;
+                resultsContainer.appendChild(noDiseaseCard);
+            }
+        }
     } else {
         // Display the best result (nail with highest disease probability)
         if (data.results && data.results.length > 0) {
             const result = data.results[0]; // Only one result now (the best one)
+            
+            // Debug: log the result to see if gradcam_heatmap is present
+            console.log('Result data:', result);
+            console.log('Grad-CAM heatmap present:', !!result.gradcam_heatmap);
             
             // Show result if it has a credible detection
             if (result.disease !== null && !result.no_disease_detected) {
@@ -167,6 +183,16 @@ function displayResults(data) {
                     }
                     resultsContainer.appendChild(resultCard);
                 }
+            } else {
+                // Even if no credible detection, show result with Grad-CAM if available
+                // This helps users see what the model is looking at
+                if (result.gradcam_heatmap) {
+                    console.log('Showing result card even without credible detection (has Grad-CAM)');
+                    const resultCard = createResultCard(result, 0);
+                    if (resultCard) {
+                        resultsContainer.appendChild(resultCard);
+                    }
+                }
             }
         }
     }
@@ -177,12 +203,13 @@ function createResultCard(result, index) {
     const card = document.createElement('div');
     card.className = 'result-card';
 
-    // Only create cards for credible detections (disease !== null)
-    if (result.disease === null || result.no_disease_detected) {
+    // Allow cards even without credible detections if Grad-CAM is available
+    // This helps users understand what the model is looking at
+    if ((result.disease === null || result.no_disease_detected) && !result.gradcam_heatmap) {
         return null;
     }
 
-    const diseaseName = formatDiseaseName(result.disease);
+    const diseaseName = result.disease ? formatDiseaseName(result.disease) : 'No Disease Detected';
     const probability = (result.probability * 100).toFixed(1);
 
     card.innerHTML = `
@@ -200,6 +227,22 @@ function createResultCard(result, index) {
                 <div class="probability-fill" style="width: ${probability}%"></div>
             </div>
         </div>
+
+        ${result.gradcam_heatmap ? `
+            <div class="gradcam-visualization" style="margin: 20px 0;">
+                <h4 style="margin-bottom: 10px; color: #333;">Grad-CAM Visualization</h4>
+                <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
+                    This heatmap shows which regions of the nail the model focused on when making its prediction. 
+                    Red/yellow areas indicate higher attention.
+                </p>
+                <div style="border: 2px solid #ddd; border-radius: 8px; overflow: hidden; background: #f8f9fa; text-align: center; padding: 10px;">
+                    <img src="data:image/jpeg;base64,${result.gradcam_heatmap}" 
+                         alt="Grad-CAM Visualization" 
+                         class="gradcam-image"
+                         style="max-width: 150px; max-height: 150px; width: auto; height: auto; display: block; margin: 0 auto;">
+                </div>
+            </div>
+        ` : ''}
 
         <div class="all-probabilities">
             <h4>All Condition Probabilities:</h4>
