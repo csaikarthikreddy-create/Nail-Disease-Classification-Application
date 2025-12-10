@@ -1,11 +1,18 @@
+<<<<<<< HEAD
 # Nail Disease Classification
 
 A comprehensive deep learning system for detecting and classifying nail diseases using multiple state-of-the-art computer vision models with an interactive web interface.
+=======
+# Nail Disease Screening Application
+
+A full end-to-end machine learning web application for nail disease screening (not a medical diagnosis tool).
+>>>>>>> feature/flask-web-application
 
 ## ⚠️ Medical Disclaimer
 
 **This application is for informational purposes only and is not a substitute for professional medical diagnosis, treatment, or advice.** Always seek the advice of a qualified healthcare provider with any questions you may have regarding a medical condition.
 
+<<<<<<< HEAD
 ## Overview
 
 This project implements a multi-model approach to nail disease classification, combining object detection and classification techniques to provide accurate diagnosis of various nail conditions. The system includes five different classification models, YOLO-based nail detection, GradCAM visualization for model interpretability, and a user-friendly web interface.
@@ -107,10 +114,51 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 3. Install dependencies:
+=======
+## Features
+
+- 🖼️ **Image Upload**: Upload hand images via web interface
+- 🔍 **Nail Detection**: YOLO-based object detection to identify and crop nail regions
+- 🧠 **Disease Classification**: Deep learning model to predict potential nail conditions
+- 📊 **Results Display**: Probability scores and localization overlays
+- ⚠️ **Medical Disclaimer**: Clear disclaimer displayed on the interface
+
+## Architecture
+
+### Components
+
+1. **Backend (Flask)**: `app.py` - Main web server and API endpoints
+2. **Nail Detector**: `models/nail_detector.py` - YOLO-based nail detection
+3. **Disease Classifier**: `models/disease_classifier.py` - DenseNet201-based classification
+4. **Frontend**: HTML/CSS/JavaScript for user interface
+
+### Disease Classes
+
+The model can classify the following conditions:
+- Acral Lentiginous Melanoma
+- Healthy Nail
+- Onychogryphosis
+- Blue Finger
+- Clubbing
+- Pitting
+
+## Setup Instructions
+
+### 1. Activate Virtual Environment
+
+```bash
+cd Nail-Disease
+source venv/bin/activate
+```
+
+### 2. Install Dependencies
+
+>>>>>>> feature/flask-web-application
 ```bash
 pip install -r requirements.txt
 ```
 
+<<<<<<< HEAD
 ## Usage
 
 ### Training Models
@@ -129,11 +177,18 @@ Open any notebook in Jupyter and follow the training steps to train models on yo
 ### Running the Web Application
 
 #### Setup Model Weights
+=======
+### 3. Setup Model Weights
+>>>>>>> feature/flask-web-application
 
 **Important**: The application requires trained DenseNet model weights for accurate predictions.
 
 **Option A: Use Trained Model**
+<<<<<<< HEAD
 - Train your model using `notebooks/densenet-10-epoch-and-32-batch.ipynb`
+=======
+- Train your model using `densenet_test_disease_classification.ipynb`
+>>>>>>> feature/flask-web-application
 - Save the model weights (see `MODEL_SETUP.md` for details)
 - Place the `.pth` file in the `models/` directory with one of these names:
   - `densenet_nail_disease_best.pth` (recommended)
@@ -150,7 +205,11 @@ export DISEASE_MODEL_PATH=/path/to/your/model.pth
 
 For YOLO: The application will automatically download YOLOv8n for nail detection.
 
+<<<<<<< HEAD
 #### Start the Application
+=======
+### 4. Run the Application
+>>>>>>> feature/flask-web-application
 
 ```bash
 python app.py
@@ -158,7 +217,11 @@ python app.py
 
 The application will be available at `http://localhost:5000`
 
+<<<<<<< HEAD
 #### Using the Application
+=======
+## Usage
+>>>>>>> feature/flask-web-application
 
 1. Open the web interface in your browser
 2. Upload a hand image (PNG, JPG, JPEG, GIF, WEBP, max 16MB)
@@ -168,6 +231,7 @@ The application will be available at `http://localhost:5000`
    - Classification results with probability scores
    - All condition probabilities for each detected nail
 
+<<<<<<< HEAD
 ## Models
 
 ### Classification Models
@@ -216,18 +280,48 @@ Refer to individual notebooks for detailed performance metrics.
 
 The Flask application provides the following endpoints:
 
+=======
+## Project Structure
+
+```
+Nail-Disease/
+├── app.py                      # Main Flask application
+├── models/
+│   ├── __init__.py
+│   ├── nail_detector.py        # YOLO nail detection
+│   └── disease_classifier.py   # Disease classification
+├── templates/
+│   └── index.html              # Main web page
+├── static/
+│   ├── css/
+│   │   └── style.css           # Styling
+│   └── js/
+│       └── app.js              # Frontend JavaScript
+├── uploads/                     # Uploaded images (created automatically)
+├── results/                     # Results storage (created automatically)
+├── requirements.txt             # Python dependencies
+└── README_APP.md               # This file
+```
+
+## API Endpoints
+
+>>>>>>> feature/flask-web-application
 ### `GET /`
 Main page with upload interface
 
 ### `GET /health`
 Health check endpoint
+<<<<<<< HEAD
 - Returns: JSON with status and model loading information
 - Example response: `{"status": "healthy", "models_loaded": true}`
+=======
+>>>>>>> feature/flask-web-application
 
 ### `POST /predict`
 Main prediction endpoint
 - **Input**: Multipart form data with `image` field
 - **Output**: JSON with detection and classification results
+<<<<<<< HEAD
 - **Response includes**:
   - `success`: Boolean indicating if prediction was successful
   - `num_nails_detected`: Number of nails found in the image
@@ -250,17 +344,30 @@ Main prediction endpoint
 4. **Frontend**: HTML/CSS/JavaScript for user interface
 
 ## Development Notes
+=======
+
+## Notes
+>>>>>>> feature/flask-web-application
 
 - **Model Weights Required**: The DenseNet classifier requires trained model weights to make accurate predictions. See `MODEL_SETUP.md` for instructions on how to save and load trained models.
 - The YOLO model uses a general-purpose pretrained model. For better nail detection, train a custom YOLO model on nail-specific data.
 - The disease classifier uses DenseNet201 architecture. You must train the model on your dataset and save the weights for production use.
 - The application is designed for screening purposes only, not medical diagnosis.
 
+<<<<<<< HEAD
 ### Future Improvements
+=======
+## Development
+
+To improve the application:
+>>>>>>> feature/flask-web-application
 
 1. Train a custom YOLO model for better nail detection
 2. Train the DenseNet201 classifier on your dataset
 3. Add model persistence and caching
 4. Add user authentication and history
 5. Improve error handling and validation
+<<<<<<< HEAD
 6. Add GradCAM visualization support
+=======
+>>>>>>> feature/flask-web-application

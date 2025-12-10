@@ -36,8 +36,9 @@ os.makedirs(RESULTS_FOLDER, exist_ok=True)
 # Model configuration
 MODELS_DIR = 'models'
 DISEASE_MODEL_PATH = os.getenv('DISEASE_MODEL_PATH', None)
+YOLO_MODEL_PATH = os.getenv('YOLO_MODEL_PATH', None)
 
-# Try to find trained model weights if not specified
+# Try to find trained disease model weights if not specified
 if DISEASE_MODEL_PATH is None:
     # Check common locations for trained models
     possible_paths = [
@@ -52,12 +53,32 @@ if DISEASE_MODEL_PATH is None:
     for path in possible_paths:
         if os.path.exists(path):
             DISEASE_MODEL_PATH = path
-            print(f"Found model weights at: {path}")
+            print(f"Found disease model weights at: {path}")
+            break
+
+# Try to find trained YOLO model if not specified
+if YOLO_MODEL_PATH is None:
+    # Check common locations for trained YOLO models
+    yolo_possible_paths = [
+        os.path.join(MODELS_DIR, 'yolo_nail_detector_best.pt'),
+        os.path.join(MODELS_DIR, 'nail_detector.pt'),
+        'yolo_nail_detector_best.pt',
+    ]
+    
+    for path in yolo_possible_paths:
+        if os.path.exists(path):
+            YOLO_MODEL_PATH = path
+            print(f"Found YOLO nail detector model at: {path}")
             break
 
 # Initialize models
 print("Loading models...")
-nail_detector = NailDetector()
+nail_detector = NailDetector(model_path=YOLO_MODEL_PATH)
+if YOLO_MODEL_PATH:
+    print(f"Using custom YOLO model: {YOLO_MODEL_PATH}")
+else:
+    print("Using default YOLOv8n model (general purpose - consider training a custom model)")
+
 disease_classifier = DiseaseClassifier(model_path=DISEASE_MODEL_PATH)
 print("Models loaded successfully!")
 
@@ -123,23 +144,46 @@ def predict():
         # Step 2: Classify each detected nail
         print("Classifying nail diseases...")
         all_results = []
+        PROBABILITY_THRESHOLD = 0.5  # 50% threshold for credible detection
         
         for idx, nail_data in enumerate(detection_results['nails']):
             nail_crop = nail_data['crop']
             bbox = nail_data['bbox']
             confidence = nail_data['confidence']
             
-            # Classify the nail crop
-            classification_result = disease_classifier.classify(nail_crop)
+            # Classify the nail crop with Grad-CAM
+            classification_result = disease_classifier.classify(nail_crop, return_gradcam=True)
+            probability = float(classification_result['probability'])
             
+            # Store all results for comparison
             all_results.append({
                 'nail_index': idx + 1,
                 'bbox': bbox,
                 'detection_confidence': float(confidence),
-                'disease': classification_result['predicted_class'],
-                'probability': float(classification_result['probability']),
-                'all_probabilities': classification_result['all_probabilities']
+                'disease': classification_result['predicted_class'] if probability > PROBABILITY_THRESHOLD else None,
+                'probability': probability,
+                'no_disease_detected': probability <= PROBABILITY_THRESHOLD,
+                'all_probabilities': classification_result['all_probabilities'],
+                'gradcam_heatmap': classification_result.get('gradcam_heatmap')  # Add Grad-CAM
             })
+        
+        # Step 3: Select the nail with the highest disease probability
+        # Filter nails with credible detections (probability > threshold)
+        credible_detections = [r for r in all_results if r.get('disease') is not None]
+        
+        if len(credible_detections) > 0:
+            # Find the nail with the highest probability
+            best_result = max(credible_detections, key=lambda x: x['probability'])
+            print(f"Selected nail {best_result['nail_index']} with highest disease probability: {best_result['probability']:.2%}")
+            final_results = [best_result]
+            num_credible_detections = 1
+        else:
+            # No credible detections - return the nail with highest probability (even if below threshold)
+            # This ensures we show something meaningful to the user
+            best_result = max(all_results, key=lambda x: x['probability'])
+            print(f"No nails exceeded threshold. Showing nail {best_result['nail_index']} with highest probability: {best_result['probability']:.2%}")
+            final_results = [best_result]
+            num_credible_detections = 0
         
         # Encode visualization image
         vis_image_base64 = None
@@ -153,15 +197,25 @@ def predict():
         return jsonify({
             'success': True,
             'num_nails_detected': len(all_results),
-            'results': all_results,
-            'detection_visualization': vis_image_base64
+            'num_credible_detections': num_credible_detections,
+            'results': final_results,  # Return only the best result
+            'detection_visualization': vis_image_base64,
+            'threshold': PROBABILITY_THRESHOLD
         })
     
     except Exception as e:
         print(f"Error in prediction: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': f'An error occurred: {str(e)}'}), 500
+        # Return more detailed error for debugging (remove in production)
+        error_details = str(e)
+        if hasattr(e, '__traceback__'):
+            import traceback as tb
+            error_details = ''.join(tb.format_exception(type(e), e, e.__traceback__))
+        return jsonify({
+            'error': f'An error occurred: {str(e)}',
+            'details': error_details if app.debug else None
+        }), 500
 
 
 if __name__ == '__main__':
