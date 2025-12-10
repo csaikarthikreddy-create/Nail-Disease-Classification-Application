@@ -1,0 +1,138 @@
+name: Model Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'models/**'
+      - '*.pt'
+      - '*.pth'
+      - '.github/workflows/model-test.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'models/**'
+      - '*.pt'
+      - '*.pth'
+  workflow_dispatch:
+
+jobs:
+  test-models:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+        cache: 'pip'
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgl1-mesa-glx libglib2.0-0
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Create test directories
+      run: |
+        mkdir -p uploads results
+    
+    - name: Test NailDetector initialization
+      run: |
+        python -c "
+        from models.nail_detector import NailDetector
+        import numpy as np
+        
+        # Test with default model
+        detector = NailDetector()
+        print('✓ NailDetector initialized with default YOLO model')
+        
+        # Test detection on dummy image
+        dummy_image = np.random.randint(0, 255, (640, 640, 3), dtype=np.uint8)
+        result = detector.detect_nails(dummy_image)
+        print('✓ NailDetector can process images')
+        "
+    
+    - name: Test DiseaseClassifier initialization
+      run: |
+        python -c "
+        from models.disease_classifier import DiseaseClassifier
+        import numpy as np
+        import cv2
+        
+        # Test with default (no weights)
+        classifier = DiseaseClassifier()
+        print('✓ DiseaseClassifier initialized')
+        
+        # Test classification on dummy image
+        dummy_image = np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8)
+        result = classifier.classify(dummy_image)
+        print(f'✓ DiseaseClassifier can classify images: {result[\"predicted_class\"]}')
+        print(f'  Classes available: {len(classifier.CLASSES)}')
+        "
+    
+    - name: Test model loading with custom path (if exists)
+      run: |
+        if [ -f "best.pt" ]; then
+          echo "Found best.pt, testing custom model loading..."
+          python -c "
+          from models.nail_detector import NailDetector
+          detector = NailDetector(model_path='best.pt')
+          print('✓ Custom YOLO model loaded successfully')
+          "
+        else
+          echo "No custom model file found, skipping custom model test"
+        fi
+    
+    - name: Test Flask app with models
+      run: |
+        python -c "
+        import os
+        os.environ['FLASK_ENV'] = 'testing'
+        from app import app, nail_detector, disease_classifier
+        
+        with app.test_client() as client:
+            # Test health endpoint
+            response = client.get('/health')
+            assert response.status_code == 200
+            data = response.get_json()
+            assert data['status'] == 'healthy'
+            assert data['models_loaded'] == True
+            print('✓ Flask app health check passed')
+            print('✓ Models loaded in Flask app')
+        "
+    
+    - name: Test model inference pipeline
+      run: |
+        python -c "
+        import cv2
+        import numpy as np
+        from models.nail_detector import NailDetector
+        from models.disease_classifier import DiseaseClassifier
+        
+        # Create a test image
+        test_image = np.random.randint(0, 255, (640, 640, 3), dtype=np.uint8)
+        
+        # Initialize models
+        detector = NailDetector()
+        classifier = DiseaseClassifier()
+        
+        # Run detection
+        detection_result = detector.detect_nails(test_image)
+        
+        if detection_result and len(detection_result['nails']) > 0:
+            # Test classification on detected nail
+            nail_crop = detection_result['nails'][0]['crop']
+            classification_result = classifier.classify(nail_crop)
+            print(f'✓ Full pipeline test passed')
+            print(f'  Detected nails: {len(detection_result[\"nails\"])}')
+            print(f'  Classification: {classification_result[\"predicted_class\"]}')
+        else:
+            print('✓ Pipeline test passed (no nails detected in random image, expected)')
+        "
+
